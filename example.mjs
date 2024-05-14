@@ -1,5 +1,5 @@
-import {WispConnection} from "./src/wisp.mjs";
-import {WispWebSocket, _wisp_connections} from "./src/polyfill.mjs";
+import { WispConnection } from "./src/wisp.mjs";
+import { WispWebSocket, _wisp_connections } from "./src/polyfill.mjs";
 
 let ws_url = `ws://localhost:5001/ws/`;
 if (typeof process === "undefined") {
@@ -7,7 +7,7 @@ if (typeof process === "undefined") {
 }
 
 function run_demo() {
-  let ws = new WispWebSocket(ws_url+"alicesworld.tech:80");
+  let ws = new WispWebSocket(ws_url + "alicesworld.tech:80");
   ws.binaryType = "arraybuffer";
   ws.addEventListener("open", () => {
     let payload = "GET / HTTP/1.1\r\nHost: alicesworld.tech\r\nConnection: close\r\n\r\n";
@@ -24,7 +24,7 @@ function run_demo() {
     }
   });
 
-  let ws2 = new WispWebSocket(ws_url+"www.google.com:80");
+  let ws2 = new WispWebSocket(ws_url + "www.google.com:80");
   ws2.binaryType = "arraybuffer";
   ws2.addEventListener("open", () => {
     let payload = "GET / HTTP/1.1\r\nHost: www.google.com\r\nConnection: close\r\n\r\n";
@@ -47,4 +47,4 @@ globalThis.WispWebSocket = WispWebSocket;
 globalThis.ws_url = ws_url;
 globalThis.run_demo = run_demo;
 
-run_demo();
+// run_demo();

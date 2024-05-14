@@ -1,5 +1,19 @@
 export { WispWebSocket } from "./polyfill.mjs";
+<<<<<<< HEAD
 import { RealCloseEvent, RealWS } from "./compat.mjs";
+import { WispNet } from "./wispnet.mjs";
+=======
+
+//don't import the ws library if we're on the browser
+let RealWS;
+if (typeof process !== "undefined") {
+  let ws = await import("ws");
+  RealWS = ws.WebSocket;
+}
+else {
+  RealWS = globalThis.WebSocket;
+}
+>>>>>>> parent of 3fc2758 (less jank node compatibility)
 
 //mapping of packet names to packet types
 export const packet_types = {
@@ -12,14 +26,14 @@ export const packet_types = {
 //mapping of types to packet names
 export const packet_names = [undefined, "CONNECT", "DATA", "CONTINUE", "CLOSE"];
 
-function uint_from_array(array) {
+export function uint_from_array(array) {
   if (array.length == 4) return new Uint32Array(array.buffer)[0];
   else if (array.length == 2) return new Uint16Array(array.buffer)[0];
   else if (array.length == 1) return array[0];
   else throw "invalid array length";
 }
 
-function array_from_uint(int, size) {
+export function array_from_uint(int, size) {
   let buffer = new ArrayBuffer(size);
   let view = new DataView(buffer);
   if (size == 1) view.setUint8(0, int, true);
@@ -29,7 +43,7 @@ function array_from_uint(int, size) {
   return new Uint8Array(buffer);
 }
 
-function concat_uint8array() {
+export function concat_uint8array() {
   let total_length = 0;
   for (let array of arguments) {
     total_length += array.length;
@@ -43,14 +57,14 @@ function concat_uint8array() {
   return new_array;
 }
 
-function create_packet(packet_type, stream_id, payload) {
+export function create_packet(packet_type, stream_id, payload) {
   let stream_id_array = array_from_uint(stream_id, 4);
   let packet_type_array = array_from_uint(packet_type, 1);
   let packet = concat_uint8array(packet_type_array, stream_id_array, payload);
   return packet;
 }
 
-class WispStream extends EventTarget {
+export class WispStream extends EventTarget {
   constructor(hostname, port, websocket, buffer_size, stream_id, connection, stream_type) {
     super();
     this.hostname = hostname;
@@ -63,10 +77,10 @@ class WispStream extends EventTarget {
     this.send_buffer = [];
     this.open = true;
 
-    this.onopen = () => {};
-    this.onclose = () => {};
-    this.onerror = () => {};
-    this.onmessage = () => {};
+    this.onopen = () => { };
+    this.onclose = () => { };
+    this.onerror = () => { };
+    this.onmessage = () => { };
   }
 
   send(data) {
@@ -130,7 +144,7 @@ export class WispConnection extends EventTarget {
     };
     this.ws.onclose = () => {
       this.on_ws_close();
-      let event = new RealCloseEvent("close");
+      let event = new (globalThis.CloseEvent || Event)("close");
       this.dispatchEvent(event);
     };
     this.ws.onmessage = (event) => {
@@ -144,7 +158,7 @@ export class WispConnection extends EventTarget {
   }
 
   close_stream(stream, reason) {
-    let close_event = new RealCloseEvent("close", { code: reason });
+    let close_event = new (globalThis.CloseEvent || Event)("close", { code: reason });
     stream.open = false;
     stream.dispatchEvent(close_event);
     delete this.active_streams[stream.stream_id];
@@ -158,7 +172,7 @@ export class WispConnection extends EventTarget {
     }
   }
 
-  create_stream(hostname, port, type="tcp") {
+  create_stream(hostname, port, type = "tcp") {
     let stream_type = type === "udp" ? 0x02 : 0x01;
     let stream_id = this.next_stream_id
     this.next_stream_id++;
@@ -174,6 +188,15 @@ export class WispConnection extends EventTarget {
 
     this.active_streams[stream_id] = stream;
     this.ws.send(packet);
+    return stream;
+  }
+  create_wispnet() {
+    let stream_id = this.next_stream_id
+    this.next_stream_id++;
+    let stream = new WispNet(this.ws, this.max_buffer_size, stream_id, this);
+    stream.stream.open = this.connected;
+
+    this.active_streams[stream_id] = stream.stream;
     return stream;
   }
 
